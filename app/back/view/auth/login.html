@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理系统 - 登录</title>
+    <link rel="stylesheet" href="/static/year/css/bootstrap.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+        }
+        .login-box {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 48px 40px;
+            width: 380px;
+            backdrop-filter: blur(10px);
+        }
+        .login-title {
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .login-sub {
+            color: rgba(255,255,255,0.45);
+            font-size: 0.85rem;
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .form-control {
+            background: rgba(255,255,255,0.08) !important;
+            border: 1px solid rgba(255,255,255,0.15) !important;
+            border-radius: 8px !important;
+            color: #fff !important;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus {
+            border-color: rgba(108,99,255,0.7) !important;
+            box-shadow: 0 0 0 3px rgba(108,99,255,0.15) !important;
+        }
+        .form-control::placeholder { color: rgba(255,255,255,0.25); }
+        .btn-login {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #6c63ff, #3ecfff);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+        .btn-login:hover { opacity: 0.88; }
+        .btn-login:disabled { opacity: 0.5; cursor: not-allowed; }
+        .error-msg {
+            color: #ff6b6b;
+            font-size: 0.82rem;
+            text-align: center;
+            margin-top: 14px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="login-box">
+    <div class="login-title">管理系统</div>
+    <div class="login-sub">请使用管理员账号登录</div>
+    <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="username" class="form-control" placeholder="请输入用户名" autocomplete="username">
+    </div>
+    <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="password" class="form-control" placeholder="请输入密码" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="loginBtn" onclick="doLogin()">登 录</button>
+    <div class="error-msg" id="errorMsg"></div>
+</div>
+
+<script src="/static/year/js/jquery.min.js"></script>
+<script>
+    // 回车触发登录
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Enter') doLogin();
+    });
+
+    function doLogin() {
+        var username = $('#username').val().trim();
+        var password = $('#password').val().trim();
+        $('#errorMsg').text('');
+
+        if (!username || !password) {
+            $('#errorMsg').text('用户名和密码不能为空');
+            return;
+        }
+
+        var btn = $('#loginBtn');
+        btn.prop('disabled', true).text('登录中...');
+
+        $.ajax({
+            url: '{:url("auth/doLogin")}',
+            type: 'POST',
+            data: { username: username, password: password },
+            dataType: 'json',
+            success: function(res) {
+                if (res.error_code === 2000) {
+                    window.top.location.href = res.data.redirect;
+                } else {
+                    $('#errorMsg').text(res.msg || '登录失败');
+                    btn.prop('disabled', false).text('登 录');
+                }
+            },
+            error: function() {
+                $('#errorMsg').text('网络错误，请稍后重试');
+                btn.prop('disabled', false).text('登 录');
+            }
+        });
+    }
+</script>
+</body>
+</html>

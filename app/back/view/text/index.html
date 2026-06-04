@@ -1,0 +1,362 @@
+{extend name="common/layout" /}
+{block name="content"}
+<script>
+(function(){
+	try{
+		var urlParams = new URLSearchParams(window.location.search);
+		var urlPerPage = urlParams.get('per_page');
+		if(!urlPerPage){
+			var storagePerPage = localStorage.getItem('text_per_page');
+			if(storagePerPage && storagePerPage != '20'){
+				var page = urlParams.get('page') || 1;
+				var appId = urlParams.get('app_id') || '';
+				var appName = urlParams.get('app_name') || '';
+				var appQuery = appId ? "&app_id=" + encodeURIComponent(appId) : "&app_name=" + encodeURIComponent(appName);
+				window.location.replace("{:url('text/index')}?page=" + page + "&per_page=" + storagePerPage + appQuery);
+			}
+		}
+	}catch(e){
+		console.log('Per page check error:', e);
+	}
+})();
+</script>
+<body>
+<div class="container-fluid p-t-15">
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="card">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<div class="card-title m-b-0">{if $appName}{$appName} - 公告配置{else /}公告管理{/if}</div>
+					{if $appId > 0}
+					<a class="btn btn-sm btn-outline-secondary" href="{:url('app/detail')}?id={$appId}">返回APP配置</a>
+					{/if}
+				</div>
+				<div class="card-body">
+					<div class="m-b-10 d-flex justify-content-between align-items-center">
+						<div>
+							{if $appId <= 0}
+							<div class="input-group" style="width:220px;">
+								<input type="text" class="form-control form-control-sm" id="filterAppName" placeholder="按APP名称筛选" value="{$appName}">
+								<div class="input-group-append">
+									<button class="btn btn-sm btn-outline-secondary" onclick="filterByAppName()">筛选</button>
+								</div>
+							</div>
+							{/if}
+						</div>
+						<div>
+							<button type="button" class="btn btn-primary" onclick="showAddModal()">
+								<i class="mdi mdi-plus"></i> 添加公告
+							</button>
+						</div>
+					</div>
+
+					<div class="table-responsive">
+						<table class="table table-bordered table-hover table-middle">
+							<thead>
+								<tr>
+									<th width="80">ID</th>
+									<th width="160">标题</th>
+									<th width="160">按钮标题</th>
+									<th width="200">跳转目标</th>
+									{if $appId <= 0}<th width="100">APP名称</th>{/if}
+									<th width="150">创建时间</th>
+									<th width="150">操作</th>
+								</tr>
+							</thead>
+							<tbody>
+								{volist name="texts" id="vo"}
+								<tr>
+									<td>{$vo.id}</td>
+									<td><small>{$vo.title|default='-'}</small></td>
+									<td><small>{$vo.btn_title|default='-'}</small></td>
+									<td><small>{$vo.target|default='-'}</small></td>
+									{if $appId <= 0}<td>{if $vo.app_name}<span class="badge badge-dark" style="font-size:11px">{$vo.app_name}</span>{else /}<span class="text-muted">-</span>{/if}</td>{/if}
+									<td>{$vo.create_time|date='Y-m-d H:i:s'}</td>
+									<td>
+										<button class="btn btn-sm btn-primary" onclick="showEditModal({$vo.id})">编辑</button>
+										<button class="btn btn-sm btn-danger" onclick="deleteText({$vo.id})">删除</button>
+									</td>
+								</tr>
+								{/volist}
+								{empty name="texts"}
+								<tr>
+									<td colspan="{if $appId > 0}6{else /}7{/if}" class="text-center">暂无数据</td>
+								</tr>
+								{/empty}
+							</tbody>
+						</table>
+					</div>
+
+					<div class="pagination-container">
+						<div class="pagination-left">
+							<ul class="pagination-custom">
+								{if $texts->currentPage() > 1}
+								<li class="page-item-custom">
+									<a href="javascript:void(0);" onclick="loadList({$texts->currentPage()-1})" class="page-link-custom">
+										<i class="mdi mdi-chevron-left"></i>
+									</a>
+								</li>
+								{else /}
+								<li class="page-item-custom disabled">
+									<span class="page-link-custom"><i class="mdi mdi-chevron-left"></i></span>
+								</li>
+								{/if}
+
+								{php}
+									$current = $texts->currentPage();
+									$last = $texts->lastPage();
+									$start = max(1, $current - 2);
+									$end = min($last, $current + 2);
+								{/php}
+
+								{for start="$start" end="$end+1"}
+								{if $i == $texts->currentPage()}
+								<li class="page-item-custom active">
+									<span class="page-link-custom">{$i}</span>
+								</li>
+								{else /}
+								<li class="page-item-custom">
+									<a href="javascript:void(0);" onclick="loadList({$i})" class="page-link-custom">{$i}</a>
+								</li>
+								{/if}
+								{/for}
+
+								{if $texts->currentPage() < $texts->lastPage()}
+								<li class="page-item-custom">
+									<a href="javascript:void(0);" onclick="loadList({$texts->currentPage()+1})" class="page-link-custom">
+										<i class="mdi mdi-chevron-right"></i>
+									</a>
+								</li>
+								{else /}
+								<li class="page-item-custom disabled">
+									<span class="page-link-custom"><i class="mdi mdi-chevron-right"></i></span>
+								</li>
+								{/if}
+							</ul>
+
+							<div class="pagination-info">
+								<span class="text-muted">共 <strong>{$texts->total()}</strong> 条，第 <strong>{$texts->currentPage()}</strong>/<strong>{$texts->lastPage()}</strong> 页</span>
+							</div>
+
+							<div class="per-page-selector">
+								<span class="text-muted">每页</span>
+								<select class="form-control form-control-sm" id="perPageSelect" onchange="changePerPage(this.value)">
+									<option value="10" {if $perPage == 10}selected{/if}>10</option>
+									<option value="20" {if $perPage == 20}selected{/if}>20</option>
+									<option value="30" {if $perPage == 30}selected{/if}>30</option>
+									<option value="50" {if $perPage == 50}selected{/if}>50</option>
+								</select>
+								<span class="text-muted">条</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="textModal" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-xl" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="modalTitle">添加公告</h5>
+				<button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+			</div>
+			<div class="modal-body">
+				<form id="textForm">
+					<input type="hidden" id="textId" name="id">
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>跳转目标</label>
+								<input type="text" class="form-control" id="textTarget" name="target">
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>标题</label>
+								<input type="text" class="form-control" id="textTitle" name="title">
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>按钮标题</label>
+								<input type="text" class="form-control" id="textBtnTitle" name="btn_title">
+							</div>
+						</div>
+					</div>
+					<div class="form-group">
+						<label>内容 <span class="text-danger">*</span></label>
+						<input type="text" class="form-control" id="textContent" name="content" placeholder="请输入内容..." required>
+					</div>
+					{if $appId > 0}
+					<input type="hidden" id="textAppName" name="app_name" value="{$appName}">
+					{else /}
+					<div class="form-group">
+						<label>APP名称</label>
+						<input type="text" class="form-control" id="textAppName" name="app_name" placeholder="请输入APP名称">
+						<small class="form-text text-muted">从某个 APP 配置页进入时会自动填入当前 APP 名称</small>
+					</div>
+					{/if}
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+				<button type="button" class="btn btn-primary" onclick="saveText()">保存</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<style>
+.table-middle td, .table-middle th { vertical-align: middle !important; }
+.pagination-container { margin-top: 15px; padding: 10px 0; }
+.pagination-left { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+.pagination-info { font-size: 13px; color: #6c757d; }
+.per-page-selector { display: flex; align-items: center; gap: 8px; padding-left: 15px; border-left: 1px solid #dee2e6; }
+.per-page-selector select { width: 70px; height: 28px; padding: 2px 8px; border-radius: 3px; border: 1px solid #dee2e6; font-size: 13px; }
+.pagination-custom { display: flex; list-style: none; padding: 0; margin: 0; gap: 5px; }
+.page-item-custom { display: inline-block; }
+.page-link-custom { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid #dee2e6; border-radius: 3px; background-color: #fff; color: #495057; text-decoration: none; font-size: 13px; transition: all 0.2s; cursor: pointer; }
+.page-link-custom:hover { background-color: #f8f9fa; border-color: #adb5bd; }
+.page-item-custom.active .page-link-custom { background-color: #007bff; border-color: #007bff; color: #fff; }
+.page-item-custom.disabled .page-link-custom { background-color: #fff; border-color: #dee2e6; color: #adb5bd; cursor: not-allowed; opacity: 0.5; }
+[data-notify="container"] { z-index: 10000 !important; }
+.alert { z-index: 10000 !important; }
+</style>
+
+<script>
+var isEditMode = false;
+var currentAppId = {$appId|default=0};
+
+$(function() {
+	var urlParams = new URLSearchParams(window.location.search);
+	var urlPerPage = urlParams.get('per_page');
+	if(urlPerPage) localStorage.setItem('text_per_page', urlPerPage);
+});
+
+function loadList(page = 1) {
+	var perPage = localStorage.getItem('text_per_page') || 20;
+	window.location.href = "{:url('text/index')}?page=" + page + "&per_page=" + perPage + getAppQueryParam();
+}
+
+function changePerPage(perPage) {
+	localStorage.setItem('text_per_page', perPage);
+	loadList(1);
+}
+
+function filterByAppName() {
+	var appName = $('#filterAppName').val() || '';
+	var perPage = localStorage.getItem('text_per_page') || 20;
+	window.location.href = "{:url('text/index')}?page=1&per_page=" + perPage + "&app_name=" + encodeURIComponent(appName);
+}
+
+function getAppQueryParam(){
+	if (currentAppId > 0) {
+		return "&app_id=" + currentAppId;
+	}
+	var appName = $('#filterAppName').val() || '';
+	return "&app_name=" + encodeURIComponent(appName);
+}
+
+function showAddModal() {
+	isEditMode = false;
+	$('#modalTitle').text('添加公告');
+	$('#textForm')[0].reset();
+	$('#textId').val('');
+	$('#textTitle').val('');
+	$('#textBtnTitle').val('');
+	$('#textContent').val('');
+	$('#textAppName').val(currentAppId > 0 ? ($('#textAppName').attr('value') || '') : ($('#filterAppName').val() || ''));
+	$('#textModal .modal-footer .btn-primary').prop('disabled', false).html('保存');
+	$('#textModal').modal('show');
+}
+
+function showEditModal(id) {
+	isEditMode = true;
+	$('#modalTitle').text('编辑公告');
+	$('#textModal .modal-footer .btn-primary').prop('disabled', false).html('保存');
+	$.ajax({
+		url: "{:url('text/get')}",
+		type: 'GET',
+		data: { id: id },
+		dataType: 'json',
+		success: function(res) {
+			if (res.error_code == 2000) {
+				var text = res.data.text;
+				$('#textId').val(text.id);
+				$('#textTitle').val(text.title || '');
+				$('#textBtnTitle').val(text.btn_title || '');
+				$('#textTarget').val(text.target || '');
+				$('#textContent').val(text.content || '');
+				$('#textAppName').val(text.app_name || '');
+				$('#textModal').modal('show');
+			} else {
+				showMsg(res.msg || '获取失败', 'danger');
+			}
+		},
+		error: function() {
+			showMsg('获取失败', 'danger');
+		}
+	});
+}
+
+function saveText() {
+	var btn = $('#textModal .modal-footer .btn-primary');
+	if(btn.prop('disabled')) return;
+
+	var content = $('#textContent').val();
+	if (!content || content.trim() === '') { showMsg('请输入内容', 'warning'); return; }
+
+	btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> 保存中...');
+
+	var url = isEditMode ? "{:url('text/edit')}" : "{:url('text/add')}";
+	$.ajax({
+		url: url,
+		type: 'POST',
+		data: $('#textForm').serialize(),
+		dataType: 'json',
+		success: function(res) {
+			if (res.error_code == 2000) {
+				showMsg(res.msg, 'success');
+				$('#textModal').modal('hide');
+				setTimeout(function() { location.reload(); }, 1000);
+			} else {
+				btn.prop('disabled', false).html('保存');
+				showMsg(res.msg || '操作失败', 'danger');
+			}
+		},
+		error: function() {
+			btn.prop('disabled', false).html('保存');
+			showMsg('操作失败', 'danger');
+		}
+	});
+}
+
+function deleteText(id) {
+	if (!confirm('确定要删除这条公告吗？')) return;
+	$.ajax({
+		url: "{:url('text/destroy')}",
+		type: 'POST',
+		data: { id: id },
+		dataType: 'json',
+		success: function(res) {
+			if (res.error_code == 2000) {
+				showMsg('删除成功', 'success');
+				setTimeout(function() { location.reload(); }, 1000);
+			} else {
+				showMsg(res.msg || '删除失败', 'danger');
+			}
+		},
+		error: function() {
+			showMsg('删除失败', 'danger');
+		}
+	});
+}
+</script>
+
+</body>
+{/block}

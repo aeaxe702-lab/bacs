@@ -1,0 +1,96 @@
+{extend name="common/layout" /}
+{block name="content"}
+<body>
+<div class="container-fluid p-t-15">
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="card">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<div class="card-title m-b-0">APP配置</div>
+					<button type="button" class="btn btn-primary btn-sm" onclick="openAddAppModal()">
+						<i class="mdi mdi-plus"></i> 添加APP
+					</button>
+				</div>
+				<div class="card-body">
+					<div class="table-responsive">
+						<table class="table table-bordered table-hover table-middle">
+							<thead>
+							<tr>
+								<th>ID</th>
+								<th>APP名称</th>
+								<th>状态</th>
+								<th>创建时间</th>
+								<th>操作</th>
+							</tr>
+							</thead>
+							<tbody>
+							{volist name="apps" id="app"}
+							<tr>
+								<td>{$app.id}</td>
+								<td>{$app.app_name}</td>
+								<td>
+									<select class="form-control form-control-sm app-status-select" data-id="{$app.id}">
+										{volist name="appStatuses" id="status"}
+										<option value="{$status.value}" {if $app.status == $status.value}selected{/if}>{$status.text}</option>
+										{/volist}
+									</select>
+								</td>
+								<td>{$app.create_time|date='Y-m-d H:i:s'}</td>
+								<td>
+									<a class="btn btn-sm btn-primary" href="{:url('app/detail')}?id={$app.id}">配置</a>
+								</td>
+							</tr>
+							{/volist}
+							{empty name="apps"}
+							<tr>
+								<td colspan="5" class="text-center text-muted">暂无APP，请从左侧 APP配置 旁边的 + 添加。</td>
+							</tr>
+							{/empty}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	function openAddAppModal() {
+		if (parent && typeof parent.showAppModal === 'function') {
+			parent.showAppModal();
+			return;
+		}
+		showMsg('请从左侧 APP配置 旁边的 + 添加APP', 'warning');
+	}
+
+	document.addEventListener('DOMContentLoaded', function(){
+		document.querySelectorAll('.app-status-select').forEach(function(select){
+			select.addEventListener('change', function(){
+				var data = new URLSearchParams();
+				data.append('id', select.getAttribute('data-id'));
+				data.append('status', select.value);
+
+				fetch("{:url('app/update')}", {
+					method: 'POST',
+					body: data,
+					credentials: 'same-origin',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+					}
+				}).then(function(resp) {
+					return resp.json();
+				}).then(function(res) {
+					if (res.error_code == 2000) {
+						showMsg('APP状态已更新');
+					} else {
+						showMsg(res.msg || '保存失败', 'danger');
+					}
+				}).catch(function() {
+					showMsg('请求失败', 'danger');
+				});
+			});
+		});
+	});
+</script>
+</body>
+{/block}

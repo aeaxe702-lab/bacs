@@ -1,0 +1,81 @@
+{extend name="common/layout" /}
+{block name="content"}
+<body>
+<div class="container-fluid p-t-15">
+    <div class="row">
+        <div class="col-md-6 col-xl-3">
+            <div class="card bg-purple text-white">
+                <div class="card-body clearfix">
+                    <div class="flex-box">
+                        <span class="img-avatar img-avatar-48 bg-translucent"><i class="mdi mdi-account-multiple-plus fs-22"></i></span>
+                        <span class="fs-22 lh-22 counter" data-target="{$todayData.reg_count}">0</span>
+                    </div>
+                    <div class="text-right">今日注册数</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">用户注册统计</div>
+                </div>
+                <div class="card-body">
+                    <div id="statsChart" style="width:100%;height:320px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/year/js/echarts.min.js"></script>
+<script>
+function animateCounter(element, target, duration) {
+    duration = duration || 900;
+    var current = 0;
+    var step = Math.max(target / (duration / 16), 1);
+    var timer = setInterval(function() {
+        current += step;
+        if (current >= target) {
+            current = target;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(current);
+    }, 16);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.counter').forEach(function(counter) {
+        animateCounter(counter, parseFloat(counter.getAttribute('data-target')) || 0);
+    });
+});
+
+(function() {
+    if (typeof echarts === 'undefined') {
+        return;
+    }
+
+    var charts = [];
+    var statsChart = echarts.init(document.getElementById('statsChart'));
+    statsChart.setOption({
+        tooltip: { trigger: 'axis', confine: true },
+        grid: { left: '3%', right: '3%', bottom: '10%', top: '10%', containLabel: true },
+        xAxis: { type: 'category', boundaryGap: false, data: {$dates|raw} },
+        yAxis: { type: 'value', min: 0 },
+        series: [
+            { name: '注册数', type: 'line', smooth: true, data: {$regCounts|raw}, itemStyle: { color: '#73c0de' } }
+        ]
+    });
+    charts.push(statsChart);
+
+    window.addEventListener('resize', function() {
+        charts.forEach(function(chart) {
+            chart.resize();
+        });
+    });
+})();
+</script>
+</body>
+{/block}

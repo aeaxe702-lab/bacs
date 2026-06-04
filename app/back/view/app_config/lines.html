@@ -1,0 +1,224 @@
+{extend name="common/layout" /}
+{block name="content"}
+<body>
+<div class="container-fluid p-t-15">
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="card">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<div class="card-title m-b-0">{$app.app_name} - 节点配置</div>
+					<a class="btn btn-sm btn-outline-secondary" href="{:url('app/detail')}?id={$app.id}">返回APP配置</a>
+				</div>
+				<div class="card-body">
+					<form id="appLineForm">
+						<input type="hidden" name="app_id" value="{$app.id}">
+						<div class="app-line-toolbar">
+							<button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllLines()">
+								<i class="mdi mdi-check-all"></i> 一键全选
+							</button>
+							<button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllLines()">
+								<i class="mdi mdi-close"></i> 取消全选
+							</button>
+							<span class="text-muted selected-count">已选择 <strong id="selectedLineCount">0</strong> 个节点</span>
+						</div>
+						<div class="table-responsive">
+							<table class="table table-bordered table-hover table-middle">
+								<thead>
+								<tr>
+									<th width="48"></th>
+									<th width="70">
+										<label class="m-b-0">
+											<input type="checkbox" id="checkAllLines" onchange="toggleAllLines(this.checked)"> 选择
+										</label>
+									</th>
+									<th width="90">图标</th>
+									<th>APP内名称</th>
+									<th>IP</th>
+								</tr>
+								</thead>
+								<tbody id="appLineList">
+								{volist name="lines" id="line"}
+								<tr data-id="{$line.id}">
+									<td class="drag-handle" title="拖拽排序">
+										<i class="mdi mdi-drag"></i>
+									</td>
+									<td>
+										<input type="checkbox" class="line-check" value="{$line.id}" {if in_array($line.id, $boundIds)}checked{/if}>
+									</td>
+									<td>
+										{if $line.img_url}
+										<img class="node-icon" src="{$line.img_url}" alt="{$line.name}">
+										{else /}
+										<span class="node-icon-placeholder"><i class="mdi mdi-link-variant"></i></span>
+										{/if}
+									</td>
+									<td>
+										<input type="text" class="form-control form-control-sm line-name-input" value="{$line.app_line_name}" data-default-name="{$line.name}" maxlength="255" {if !in_array($line.id, $boundIds)}disabled{/if}>
+										<small class="text-muted">公共名称：{$line.name}</small>
+									</td>
+									<td>{$line.ip}</td>
+								</tr>
+								{/volist}
+								{empty name="lines"}
+								<tr>
+									<td colspan="5" class="text-center text-muted">暂无节点，请先到“节点配置”添加节点。</td>
+								</tr>
+								{/empty}
+								</tbody>
+							</table>
+						</div>
+						<div class="text-right">
+							<button type="button" class="btn btn-primary" onclick="saveAppLines()">保存绑定</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript" src="/static/year/js/Sortable.min.js"></script>
+<style>
+	.app-line-toolbar {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 10px;
+		flex-wrap: wrap;
+	}
+	.app-line-toolbar .selected-count {
+		margin-left: 4px;
+		font-size: 13px;
+	}
+	.drag-handle {
+		width: 48px;
+		text-align: center;
+		cursor: move;
+		color: #8b95a5;
+	}
+	.drag-handle i { font-size: 20px; }
+	.node-icon,
+	.node-icon-placeholder {
+		width: 38px;
+		height: 38px;
+		border-radius: 6px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid #e5e8ef;
+		background: #f8fafc;
+		object-fit: cover;
+	}
+	.node-icon-placeholder i {
+		color: #33cabb;
+		font-size: 20px;
+	}
+	#appLineList tr {
+		transition: background-color .2s;
+	}
+	#appLineList tr:hover {
+		background-color: #fbfcff;
+	}
+	.sortable-ghost {
+		opacity: .45;
+		background: #eef7f6 !important;
+	}
+</style>
+<script>
+	(function(){
+		var el = document.getElementById('appLineList');
+		if (!el) return;
+
+		new Sortable(el, {
+			animation: 150,
+			handle: '.drag-handle',
+			ghostClass: 'sortable-ghost'
+		});
+
+		document.querySelectorAll('.line-check').forEach(function(checkbox){
+			checkbox.addEventListener('change', function(){
+				syncLineNameInput(checkbox);
+				updateCheckAllState();
+			});
+			syncLineNameInput(checkbox);
+		});
+		updateCheckAllState();
+	})();
+
+	function toggleAllLines(checked) {
+		document.querySelectorAll('.line-check').forEach(function(checkbox){
+			checkbox.checked = checked;
+			syncLineNameInput(checkbox);
+		});
+		updateCheckAllState();
+	}
+
+	function selectAllLines() {
+		toggleAllLines(true);
+	}
+
+	function clearAllLines() {
+		toggleAllLines(false);
+	}
+
+	function updateCheckAllState() {
+		var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.line-check'));
+		var checkAll = document.getElementById('checkAllLines');
+		var countEl = document.getElementById('selectedLineCount');
+		var checkedCount = checkboxes.filter(function(checkbox){
+			return checkbox.checked;
+		}).length;
+
+		if (countEl) {
+			countEl.textContent = checkedCount;
+		}
+		if (!checkAll) {
+			return;
+		}
+
+		checkAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+		checkAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+	}
+
+	function syncLineNameInput(checkbox) {
+		var row = checkbox.closest('tr');
+		var input = row ? row.querySelector('.line-name-input') : null;
+		if (!input) return;
+
+		input.disabled = !checkbox.checked;
+		if (checkbox.checked && !input.value.trim()) {
+			input.value = input.getAttribute('data-default-name') || '';
+		}
+	}
+
+	function saveAppLines() {
+		var data = new FormData();
+		data.append('app_id', '{$app.id}');
+		document.querySelectorAll('#appLineList tr').forEach(function(row){
+			var checkbox = row.querySelector('.line-check');
+			if (checkbox && checkbox.checked) {
+				data.append('line_ids[]', checkbox.value);
+				var nameInput = row.querySelector('.line-name-input');
+				data.append('line_names[' + checkbox.value + ']', nameInput ? nameInput.value.trim() : '');
+			}
+		});
+
+		fetch('{:url("app/saveLines")}', {
+			method: 'POST',
+			body: data,
+			credentials: 'same-origin'
+		}).then(function(resp){
+			return resp.json();
+		}).then(function(res){
+			if (res.error_code === 2000) {
+				showMsg('保存成功');
+				return;
+			}
+			showMsg(res.msg || '保存失败', 'danger');
+		}).catch(function(){
+			showMsg('请求失败', 'danger');
+		});
+	}
+</script>
+</body>
+{/block}

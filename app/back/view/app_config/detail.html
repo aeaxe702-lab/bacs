@@ -1,0 +1,179 @@
+{extend name="common/layout" /}
+{block name="content"}
+<body>
+<div class="container-fluid p-t-15">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="app-config-header">
+                <div class="app-config-title">
+                    <div class="card-title m-b-0">APP：{$app.app_name}</div>
+                    <small class="text-muted">
+                        状态：
+                        <span class="badge badge-{$app.status_class}">{$app.status_text}</span>
+                    </small>
+                </div>
+                <div class="app-config-actions-wrap">
+                    <div class="app-config-actions">
+                        <a class="btn btn-sm btn-primary" href="{:url('app/project')}?id={$app.id}">
+                            项目配置
+                        </a>
+                        <a class="btn btn-sm btn-primary" href="{:url('app/lines')}?id={$app.id}">
+                            节点
+                        </a>
+                        <a class="btn btn-sm btn-primary" href="{:url('user/index')}?app_id={$app.id}">
+                            用户
+                        </a>
+                        <a class="btn btn-sm btn-primary" href="{:url('text/index')}?app_id={$app.id}">
+                            文本
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-xl-3">
+            <div class="card bg-purple text-white">
+                <div class="card-body clearfix">
+                    <div class="flex-box">
+                        <span class="img-avatar img-avatar-48 bg-translucent"><i class="mdi mdi-account-multiple-plus fs-22"></i></span>
+                        <span class="fs-22 lh-22 counter" data-target="{$todayData.reg_count}">0</span>
+                    </div>
+                    <div class="text-right">今日注册数</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">{$app.app_name} - 注册统计</div>
+                </div>
+                <div class="card-body">
+                    <div id="appStatsChart" style="width:100%;height:320px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .app-config-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .app-config-title {
+        min-width: 180px;
+    }
+    .app-config-actions-wrap {
+        flex: 1;
+    }
+    .app-config-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .app-config-actions .btn i {
+        margin-right: 4px;
+    }
+    .overview-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 14px;
+    }
+    .overview-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    .overview-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border: 1px solid #e6ebf1;
+        border-radius: 10px;
+        color: #495057;
+        text-decoration: none;
+        background: #fbfcfe;
+        transition: all .2s ease;
+    }
+    .overview-link:hover {
+        text-decoration: none;
+        color: #007bff;
+        border-color: #cfe2ff;
+        background: #f4f8ff;
+    }
+    .overview-link i {
+        font-size: 20px;
+    }
+    @media (max-width: 768px) {
+        .app-config-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+        .app-config-actions-wrap {
+            width: 100%;
+        }
+        .app-config-actions {
+            justify-content: flex-start;
+        }
+    }
+</style>
+<script src="/static/year/js/echarts.min.js"></script>
+<script>
+function animateCounter(element, target, duration) {
+    duration = duration || 900;
+    var current = 0;
+    var step = Math.max(target / (duration / 16), 1);
+    var timer = setInterval(function() {
+        current += step;
+        if (current >= target) {
+            current = target;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(current);
+    }, 16);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.counter').forEach(function(counter) {
+        animateCounter(counter, parseFloat(counter.getAttribute('data-target')) || 0);
+    });
+});
+
+(function() {
+    if (typeof echarts === 'undefined') {
+        return;
+    }
+
+    var charts = [];
+    var appStatsChart = echarts.init(document.getElementById('appStatsChart'));
+    appStatsChart.setOption({
+        tooltip: { trigger: 'axis', confine: true },
+        grid: { left: '3%', right: '3%', bottom: '10%', top: '10%', containLabel: true },
+        xAxis: { type: 'category', boundaryGap: false, data: {$dates|raw} },
+        yAxis: { type: 'value', min: 0 },
+        series: [
+            { name: '注册数', type: 'line', smooth: true, data: {$regCounts|raw}, itemStyle: { color: '#73c0de' } }
+        ]
+    });
+    charts.push(appStatsChart);
+
+    window.addEventListener('resize', function() {
+        charts.forEach(function(chart) {
+            chart.resize();
+        });
+    });
+})();
+</script>
+</body>
+{/block}

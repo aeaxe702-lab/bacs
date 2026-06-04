@@ -1,0 +1,150 @@
+{extend name="common/layout" /}
+{block name="content"}
+<body>
+<div class="container-fluid p-t-15">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-title m-b-0">{$app.app_name} - 项目配置</div>
+                    <div class="d-flex" style="gap: 8px; flex-wrap: wrap;">
+                        <a class="btn btn-sm btn-outline-secondary" href="{:url('app/detail')}?id={$app.id}">
+                            返回APP配置
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="appProjectConfigForm">
+                        <input type="hidden" name="id" value="{$app.id}">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>横幅位ID</label>
+                                    <input type="text" class="form-control" name="banner_position_id" value="{$projectConfig.banner_position_id|default=''}" maxlength="128">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>插页ID</label>
+                                    <input type="text" class="form-control" name="interstitial_position_id" value="{$projectConfig.interstitial_position_id|default=''}" maxlength="128">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>广告添加时长</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="ad_interval_minutes" value="{$projectConfig.ad_interval_minutes|default='0'}" min="0">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text">分钟</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>连续广告次数</label>
+                                    <input type="number" class="form-control" name="ad_continuous_count" value="{$projectConfig.ad_continuous_count|default='0'}" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>是否弹框</label>
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="popupEnabledSwitch" {if $projectConfig.popup_enabled == 1}checked{/if}>
+                                <input type="hidden" name="popup_enabled" id="popupEnabledValue" value="{$projectConfig.popup_enabled|default='0'}">
+                                <label class="custom-control-label" for="popupEnabledSwitch"></label>
+                            </div>
+                        </div>
+                        <div id="popupFields">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>弹框标题</label>
+                                        <input type="text" class="form-control popup-required" name="popup_title" value="{$projectConfig.popup_title|default=''}" maxlength="255">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>按钮标题</label>
+                                        <input type="text" class="form-control popup-required" name="popup_button_title" value="{$projectConfig.popup_button_title|default=''}" maxlength="255">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>弹框内容</label>
+                                <textarea class="form-control popup-required" name="popup_content" rows="4" maxlength="2000">{$projectConfig.popup_content|default=''}</textarea>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <button type="button" class="btn btn-primary" onclick="saveAppProjectConfig()">
+                                <i class="mdi mdi-content-save-outline"></i> 保存配置
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #popupFields {
+        display: none;
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    bindProjectConfigForm();
+});
+
+function bindProjectConfigForm() {
+    var popupSwitch = document.getElementById('popupEnabledSwitch');
+    if (!popupSwitch) {
+        return;
+    }
+    popupSwitch.addEventListener('change', syncPopupFields);
+    syncPopupFields();
+}
+
+function syncPopupFields() {
+    var popupSwitch = document.getElementById('popupEnabledSwitch');
+    var popupValue = document.getElementById('popupEnabledValue');
+    var popupFields = document.getElementById('popupFields');
+    var enabled = popupSwitch && popupSwitch.checked;
+    if (popupValue) {
+        popupValue.value = enabled ? '1' : '0';
+    }
+    if (popupFields) {
+        popupFields.style.display = enabled ? 'block' : 'none';
+    }
+    document.querySelectorAll('.popup-required').forEach(function(input) {
+        input.required = !!enabled;
+    });
+}
+
+function saveAppProjectConfig() {
+    syncPopupFields();
+    var form = document.getElementById('appProjectConfigForm');
+    var data = new FormData(form);
+
+    fetch("{:url('app/saveConfig')}", {
+        method: 'POST',
+        body: data,
+        credentials: 'same-origin'
+    }).then(function(resp) {
+        return resp.json();
+    }).then(function(res) {
+        if (res.error_code == 2000) {
+            showMsg(res.msg || '保存成功');
+        } else {
+            showMsg(res.msg || '保存失败', 'danger');
+        }
+    }).catch(function() {
+        showMsg('请求失败', 'danger');
+    });
+}
+</script>
+</body>
+{/block}

@@ -1,0 +1,1186 @@
+﻿{extend name="common/layout" /}
+{block name="content"}
+<script>
+// 在页面渲染前检查并重定向
+(function(){
+	try{
+		var urlParams = new URLSearchParams(window.location.search);
+		var urlPerPage = urlParams.get('per_page');
+		
+		// 如果 URL 中没有 per_page 参数
+		if(!urlPerPage){
+			var storagePerPage = localStorage.getItem('line_per_page');
+			// 如果 localStorage 中有值且不是默认值
+			if(storagePerPage && storagePerPage != '20'){
+				var page = urlParams.get('page') || 1;
+				window.location.replace("{:url('line/index')}?page=" + page + "&per_page=" + storagePerPage);
+			}
+		}
+	}catch(e){
+		// 忽略错误，继续加载页面
+		console.log('Per page check error:', e);
+	}
+})();
+</script>
+<body>
+<div class="container-fluid p-t-15">
+	
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="card">
+				<div class="card-header">
+					<div class="card-title">线路管理</div>
+				</div>
+				<div class="card-body">
+					<div class="m-b-10" style="float: right">
+						<button type="button" class="btn btn-primary" onclick="showAddModal()">
+							<i class="mdi mdi-plus"></i> 添加线路
+						</button>
+					</div>
+					
+					<div class="table-responsive">
+						<table class="table table-bordered table-hover table-middle">
+							<thead>
+								<tr>
+									<th width="60">ID</th>
+									<th width="80">图标</th>
+									<th>线路名称</th>
+									<th>IP地址</th>
+									<th>总上传</th>
+									<th>总下载</th>
+									<th>今日上传</th>
+									<th>今日下载</th>
+									<th>实时连接数</th>
+									<th>实时上传</th>
+									<th>实时下载</th>
+									<th width="150">操作</th>
+								</tr>
+							</thead>
+							<tbody id="lineList">
+							{volist name="lineInfos" id="vo" key="k"}
+							<tr data-id="{$vo.id}" data-node-key="{$vo.ip}:{$vo.port}">
+								<td class="drag-handle" style="cursor: move;">{$vo.id}</td>
+								<td>
+									{if $vo.img_url}
+									<img src="{$vo.img_url}" alt="图标" class="line-icon">
+									{else /}
+									<span class="text-muted">-</span>
+									{/if}
+								</td>
+								<td>{$vo.name}</td>
+								<td>
+									<a href="javascript:void(0);" class="node-ip-link" onclick="showNodeTrafficChart('{$vo.ip}:{$vo.port}')">
+										{$vo.ip}
+									</a>
+								</td>
+								<td class="node-stat-cell" data-field="total_upload_text">0 B</td>
+								<td class="node-stat-cell" data-field="total_download_text">0 B</td>
+								<td class="node-stat-cell" data-field="today_upload_text">0 B</td>
+								<td class="node-stat-cell" data-field="today_download_text">0 B</td>
+								<td class="node-stat-cell" data-field="connections">0</td>
+								<td class="node-stat-cell" data-field="last_30s_upload_text">0 B</td>
+								<td class="node-stat-cell" data-field="last_30s_download_text">0 B</td>
+								<td>
+									<button class="btn btn-sm btn-info m-r-5" onclick="showEditModal({$vo.id})">编辑</button>
+									<button class="btn btn-sm btn-danger" onclick="showDeleteConfirm({$vo.id})">删除</button>
+								</td>
+							</tr>
+							{/volist}
+							{empty name="lineInfos"}
+							<tr>
+								<td colspan="12" class="text-center">暂无数据</td>
+							</tr>
+							{/empty}
+						</tbody>
+					</table>
+					</div>
+					
+					<!-- 分页区域 -->
+					<div class="pagination-container">
+						<div class="pagination-left">
+							<ul class="pagination-custom">
+								<!-- 上一页 -->
+								{if $lineInfos->currentPage() > 1}
+								<li class="page-item-custom">
+									<a href="javascript:void(0);" onclick="loadList({$lineInfos->currentPage()-1})" class="page-link-custom">
+										<i class="mdi mdi-chevron-left"></i>
+									</a>
+								</li>
+								{else /}
+								<li class="page-item-custom disabled">
+									<span class="page-link-custom">
+										<i class="mdi mdi-chevron-left"></i>
+									</span>
+								</li>
+								{/if}
+								
+								<!-- 页码 -->
+								{php}
+									$current = $lineInfos->currentPage();
+									$last = $lineInfos->lastPage();
+									$start = max(1, $current - 2);
+									$end = min($last, $current + 2);
+								{/php}
+								
+								{for start="$start" end="$end+1"}
+								{if $i == $lineInfos->currentPage()}
+								<li class="page-item-custom active">
+									<span class="page-link-custom">{$i}</span>
+								</li>
+								{else /}
+								<li class="page-item-custom">
+									<a href="javascript:void(0);" onclick="loadList({$i})" class="page-link-custom">{$i}</a>
+								</li>
+								{/if}
+								{/for}
+								
+								<!-- 下一页 -->
+								{if $lineInfos->currentPage() < $lineInfos->lastPage()}
+								<li class="page-item-custom">
+									<a href="javascript:void(0);" onclick="loadList({$lineInfos->currentPage()+1})" class="page-link-custom">
+										<i class="mdi mdi-chevron-right"></i>
+									</a>
+								</li>
+								{else /}
+								<li class="page-item-custom disabled">
+									<span class="page-link-custom">
+										<i class="mdi mdi-chevron-right"></i>
+									</span>
+								</li>
+								{/if}
+							</ul>
+							
+							<div class="pagination-info">
+								<span class="text-muted">共 <strong>{$lineInfos->total()}</strong> 条，第 <strong>{$lineInfos->currentPage()}</strong>/<strong>{$lineInfos->lastPage()}</strong> 页</span>
+							</div>
+							
+							<div class="per-page-selector">
+								<span class="text-muted">每页</span>
+								<select class="form-control form-control-sm" id="perPageSelect" onchange="changePerPage(this.value)">
+									<option value="10" {if $perPage == 10}selected{/if}>10</option>
+									<option value="20" {if $perPage == 20}selected{/if}>20</option>
+									<option value="30" {if $perPage == 30}selected{/if}>30</option>
+									<option value="50" {if $perPage == 50}selected{/if}>50</option>
+									<option value="100" {if $perPage == 100}selected{/if}>100</option>
+								</select>
+								<span class="text-muted">条</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- 添加/编辑线路模态框 -->
+<div class="modal fade" id="lineModal" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-xl" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="modalTitle">添加线路</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<!-- 错误提示区域 -->
+				<div id="modalErrorMsg" class="alert alert-danger" style="display: none;" role="alert">
+					<i class="mdi mdi-alert-circle"></i>
+					<span id="modalErrorText"></span>
+				</div>
+				
+				<form id="lineForm">
+					<input type="hidden" id="lineId" name="id">
+					<input type="hidden" id="imgUrl" name="img_url">
+					
+					<div class="row">
+						<!-- 左侧：表单字段 -->
+						<div class="col-md-7">
+							<div class="form-group">
+								<label>线路名称 <span class="text-danger">*</span></label>
+								<input type="text" class="form-control" id="name" name="name" placeholder="请输入线路名称" required>
+							</div>
+							
+							<div class="form-group">
+								<label>副标题</label>
+								<input type="text" class="form-control" id="subtitle" name="subtitle" placeholder="请输入副标题">
+							</div>
+							
+							<div class="form-group">
+								<label for="ip">IP地址 <span class="text-danger">*</span></label>
+								<input type="text" class="form-control" id="ip" name="ip" placeholder="请输入IP地址" required>
+							</div>
+							
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="port">端口 <span class="text-danger">*</span></label>
+										<input type="text" class="form-control" id="port" name="port" value="443" placeholder="请输入端口" required>
+									</div>
+								</div>
+								
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="uuid">UUID <span class="text-danger">*</span></label>
+										<input type="text" class="form-control" id="uuid" name="uuid" required>
+									</div>
+								</div>
+							</div>
+							
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="sni">SNI <span class="text-danger">*</span></label>
+										<input type="text" class="form-control" id="sni" name="sni" required>
+									</div>
+								</div>
+								
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="public_key">公钥 <span class="text-danger">*</span></label>
+										<input type="text" class="form-control" id="public_key" name="public_key" required>
+									</div>
+								</div>
+							</div>
+							
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="short_id">短 ID <span class="text-danger">*</span></label>
+										<input type="text" class="form-control" id="short_id" name="short_id" required>
+									</div>
+								</div>
+								
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="flow">流控 <span class="text-danger">*</span></label>
+										<input type="text" class="form-control" id="flow" name="flow" value="xtls-rprx-vision" placeholder="请输入流控" required>
+									</div>
+								</div>
+							</div>
+							
+							<div class="form-group">
+								<label for="type">线路类型 <span class="text-danger">*</span></label>
+								<select class="form-control" id="type" name="type" required>
+									<option value="0">普通</option>
+									<option value="1">高级</option>
+								</select>
+							</div>
+						</div>
+						
+						<!-- 右侧：图片上传 -->
+						<div class="col-md-5">
+							<div class="form-group">
+								<label>线路图标</label>
+								<div class="upload-area-vertical" id="uploadArea">
+									<div class="upload-placeholder" id="uploadPlaceholder">
+										<i class="mdi mdi-cloud-upload"></i>
+										<p>点击或拖拽图片到此处上传</p>
+										<small class="text-muted">支持 JPG、PNG、GIF 格式<br>大小不超过 2MB</small>
+									</div>
+									<div class="upload-preview" id="uploadPreview" style="display: none;">
+										<img id="previewImage" src="" alt="预览图">
+										<button type="button" class="btn-remove-image" onclick="removeImage()">
+											<i class="mdi mdi-close"></i>
+										</button>
+									</div>
+									<input type="file" id="fileInput" accept="image/*" style="display: none;">
+								</div>
+							</div>
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+				<button type="button" class="btn btn-primary" onclick="saveLine()">保存</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-body text-center p-4">
+				<div class="mb-3">
+					<i class="mdi mdi-alert-circle-outline text-warning" style="font-size: 64px;"></i>
+				</div>
+				<h5 class="mb-2">确认删除</h5>
+				<p class="text-muted mb-4">删除后将无法恢复，确定要删除这条线路吗？</p>
+				<div>
+					<button type="button" class="btn btn-secondary m-r-10" data-dismiss="modal">取消</button>
+					<button type="button" class="btn btn-danger" onclick="confirmDelete()">
+						<i class="mdi mdi-delete"></i> 确定删除
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- 节点近7天流量图表 -->
+<div class="modal fade" id="nodeTrafficModal" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-lg" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">节点近7天流量：<span id="nodeTrafficTitle">-</span></h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<div id="nodeTrafficChart" style="width:100%;height:360px;"></div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript" src="/static/year/js/Sortable.min.js"></script>
+<style>
+.table-middle td,
+.table-middle th {
+	vertical-align: middle !important;
+}
+
+.line-icon {
+	width: 40px;
+	height: 40px;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid #dee2e6;
+}
+
+.node-ip-link {
+	font-weight: 700;
+	color: #1d4ed8;
+	text-decoration: none;
+}
+
+.node-ip-link:hover {
+	color: #0f3a9e;
+	text-decoration: underline;
+}
+
+.node-stat-cell {
+	white-space: nowrap;
+	font-weight: 600;
+	color: #1f2937;
+	text-align: right;
+	min-width: 86px;
+}
+
+.table-middle th {
+	white-space: nowrap;
+}
+/* 拖拽样式 */
+.drag-handle {
+	cursor: move !important;
+	user-select: none;
+	position: relative;
+}
+
+.drag-handle:hover {
+	background-color: #e9ecef;
+}
+
+.drag-handle::before {
+	content: '\F035D';
+	font-family: 'Material Design Icons';
+	position: absolute;
+	left: 5px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #6c757d;
+	font-size: 16px;
+	opacity: 0;
+	transition: opacity 0.2s;
+}
+
+.drag-handle:hover::before {
+	opacity: 1;
+}
+
+#lineList tr[data-id] {
+	transition: background-color 0.2s;
+}
+
+.sortable-ghost {
+	opacity: 0.4;
+	background-color: #e9ecef !important;
+}
+
+.sortable-drag {
+	opacity: 1;
+	background-color: #fff !important;
+	box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+}
+
+.no-drag {
+	cursor: default !important;
+}
+
+.uuid-mask {
+	font-family: monospace;
+}
+
+#deleteModal .modal-content {
+	border-radius: 10px;
+	border: none;
+	box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+#deleteModal .modal-body {
+	padding: 2rem;
+}
+
+#deleteModal .btn {
+	min-width: 100px;
+	border-radius: 5px;
+}
+
+/* 上传区域样式 */
+.upload-area {
+	position: relative;
+	border: 2px dashed #dee2e6;
+	border-radius: 8px;
+	background-color: #f8f9fa;
+	transition: all 0.3s;
+	overflow: hidden;
+}
+
+/* 垂直布局的上传区域 */
+.upload-area-vertical {
+	position: relative;
+	border: 2px dashed #dee2e6;
+	border-radius: 8px;
+	background-color: #f8f9fa;
+	transition: all 0.3s;
+	overflow: hidden;
+	min-height: 380px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.upload-area.drag-over,
+.upload-area-vertical.drag-over {
+	border-color: #007bff;
+	background-color: #e7f3ff;
+}
+
+.upload-placeholder {
+	padding: 40px 20px;
+	text-align: center;
+	cursor: pointer;
+	width: 100%;
+}
+
+.upload-placeholder i {
+	font-size: 48px;
+	color: #6c757d;
+	margin-bottom: 10px;
+	display: block;
+}
+
+.upload-placeholder p {
+	margin: 10px 0 5px;
+	color: #495057;
+	font-size: 14px;
+}
+
+.upload-placeholder small {
+	font-size: 12px;
+	display: block;
+	line-height: 1.6;
+}
+
+.upload-preview {
+	position: relative;
+	padding: 10px;
+	text-align: center;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.upload-preview img {
+	max-width: 100%;
+	max-height: 350px;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-remove-image {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+	width: 30px;
+	height: 30px;
+	border: none;
+	border-radius: 50%;
+	background-color: rgba(220, 53, 69, 0.9);
+	color: #fff;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s;
+	z-index: 10;
+}
+
+.btn-remove-image:hover {
+	background-color: #dc3545;
+	transform: scale(1.1);
+}
+
+.btn-remove-image i {
+	font-size: 18px;
+}
+
+/* 分页容器 */
+.pagination-container {
+	margin-top: 15px;
+	padding: 10px 0;
+}
+
+.pagination-left {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+}
+
+.pagination-info {
+	font-size: 13px;
+	color: #6c757d;
+}
+
+.pagination-info strong {
+	color: #495057;
+}
+
+/* 每页数量选择器 */
+.per-page-selector {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-left: 15px;
+	padding-left: 15px;
+	border-left: 1px solid #dee2e6;
+}
+
+.per-page-selector .text-muted {
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.per-page-selector select {
+	width: 70px;
+	height: 28px;
+	padding: 2px 8px;
+	border-radius: 3px;
+	border: 1px solid #dee2e6;
+	font-size: 13px;
+}
+
+/* 分页按钮 */
+.pagination-custom {
+	display: flex;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	gap: 5px;
+}
+
+.page-item-custom {
+	display: inline-block;
+}
+
+.page-link-custom {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border: 1px solid #dee2e6;
+	border-radius: 3px;
+	background-color: #fff;
+	color: #495057;
+	text-decoration: none;
+	font-size: 13px;
+	transition: all 0.2s;
+	cursor: pointer;
+}
+
+.page-link-custom i {
+	font-size: 14px;
+}
+
+.page-link-custom:hover {
+	background-color: #f8f9fa;
+	border-color: #adb5bd;
+}
+
+.page-item-custom.active .page-link-custom {
+	background-color: #007bff;
+	border-color: #007bff;
+	color: #fff;
+	cursor: default;
+}
+
+.page-item-custom.disabled .page-link-custom {
+	background-color: #fff;
+	border-color: #dee2e6;
+	color: #adb5bd;
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.page-item-custom.disabled .page-link-custom:hover {
+	background-color: #fff;
+	border-color: #dee2e6;
+}
+</style>
+<script type="text/javascript">
+var currentPage = 1;
+var isEdit = false;
+var deleteId = 0;
+var uploadedImageUrl = '';
+var nodeStats = {$nodeStats|raw};
+var nodeCharts = {$nodeCharts|raw};
+var nodeTrafficChart = null;
+var echartsLoader = null;
+var isRefreshingNodeStats = false;
+var nodeStatsTimer = null;
+
+$(function(){
+	initUploadArea();
+	initSortable();
+	applyNodeStats(nodeStats);
+	startNodeStatsRefresh();
+	
+	// 保存当前 per_page 到 localStorage
+	var urlParams = new URLSearchParams(window.location.search);
+	var urlPerPage = urlParams.get('per_page');
+	if(urlPerPage){
+		localStorage.setItem('line_per_page', urlPerPage);
+	}
+});
+
+function isPageVisible(){
+	return !document.hidden && (!window.frameElement || window.frameElement.classList.contains('active'));
+}
+
+function startNodeStatsRefresh(){
+	if(nodeStatsTimer){
+		clearInterval(nodeStatsTimer);
+	}
+
+	nodeStatsTimer = setInterval(function(){
+		if(isPageVisible()){
+			refreshLineNodeStats();
+		}
+	}, 30000);
+
+	document.addEventListener('visibilitychange', function(){
+		if(isPageVisible()){
+			refreshLineNodeStats();
+		}
+	});
+
+	window.addEventListener('beforeunload', function(){
+		if(nodeStatsTimer){
+			clearInterval(nodeStatsTimer);
+		}
+	});
+}
+
+function formatBytes(bytes) {
+	var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+	var value = Math.max(0, Number(bytes) || 0);
+	var index = 0;
+	while (value >= 1024 && index < units.length - 1) {
+		value = value / 1024;
+		index++;
+	}
+	return (index === 0 ? Math.round(value) : value.toFixed(2)) + ' ' + units[index];
+}
+
+function applyNodeStats(stats){
+	stats = stats || {};
+	$('#lineList tr[data-node-key]').each(function(){
+		var $tr = $(this);
+		var nodeKey = $tr.attr('data-node-key');
+		var stat = stats[nodeKey] || {};
+		setNodeField($tr, 'total_upload_text', stat.total_upload_text || '0 B');
+		setNodeField($tr, 'total_download_text', stat.total_download_text || '0 B');
+		setNodeField($tr, 'today_upload_text', stat.today_upload_text || '0 B');
+		setNodeField($tr, 'today_download_text', stat.today_download_text || '0 B');
+		setNodeField($tr, 'connections', stat.connections || 0);
+		setNodeField($tr, 'last_30s_upload_text', stat.last_30s_upload_text || '0 B');
+		setNodeField($tr, 'last_30s_download_text', stat.last_30s_download_text || '0 B');
+	});
+}
+
+function setNodeField($tr, field, value){
+	var $target = $tr.find('[data-field="' + field + '"]');
+	if($target.length){
+		$target.text(value);
+	}
+}
+
+function refreshLineNodeStats(){
+	if(isRefreshingNodeStats){
+		return;
+	}
+
+	var lineIds = [];
+	$('#lineList tr[data-id]').each(function(){
+		var id = $(this).data('id');
+		if(id){
+			lineIds.push(id);
+		}
+	});
+	if(lineIds.length === 0){
+		return;
+	}
+
+	isRefreshingNodeStats = true;
+	$.ajax({
+		url: "{:url('line/nodeStats')}",
+		type: 'GET',
+		data: { line_ids: lineIds },
+		dataType: 'json',
+		success: function(res){
+			if(res.error_code == 2000 && res.data){
+				nodeStats = res.data.nodeStats || {};
+				nodeCharts = res.data.nodeCharts || {};
+				applyNodeStats(nodeStats);
+			}
+		},
+		complete: function(){
+			isRefreshingNodeStats = false;
+		}
+	});
+}
+
+function showNodeTrafficChart(nodeKey){
+	var chartData = nodeCharts[nodeKey];
+	if(!chartData){
+		showMsg('暂无该节点流量数据', 'warning');
+		return;
+	}
+
+	$('#nodeTrafficTitle').text(chartData.label || nodeKey);
+	$('#nodeTrafficModal')
+		.off('shown.bs.modal.nodeTraffic')
+		.on('shown.bs.modal.nodeTraffic', function(){
+			ensureEcharts(function(){
+				renderNodeTrafficChart(chartData);
+			});
+		})
+		.modal('show');
+}
+
+function ensureEcharts(callback){
+	if(typeof echarts !== 'undefined'){
+		callback();
+		return;
+	}
+
+	if(!echartsLoader){
+		echartsLoader = $.getScript('/static/year/js/echarts.min.js');
+	}
+
+	echartsLoader.done(callback).fail(function(){
+		showMsg('图表组件加载失败', 'danger');
+	});
+}
+
+function renderNodeTrafficChart(chartData){
+	if(typeof echarts === 'undefined'){
+		return;
+	}
+
+	var dom = document.getElementById('nodeTrafficChart');
+	if(!dom){
+		return;
+	}
+
+	if(!nodeTrafficChart){
+		nodeTrafficChart = echarts.init(dom);
+	}
+
+	nodeTrafficChart.setOption({
+		tooltip: {
+			trigger: 'axis',
+			formatter: function(items){
+				var lines = [(chartData.label || chartData.node_key) + ' / ' + items[0].axisValue];
+				items.forEach(function(item){
+					lines.push(item.marker + item.seriesName + ': ' + formatBytes(item.value));
+				});
+				return lines.join('<br>');
+			}
+		},
+		legend: { data: ['上传', '下载'], top: 0, right: 0 },
+		grid: { left: '3%', right: '4%', bottom: '8%', top: '16%', containLabel: true },
+		xAxis: { type: 'category', boundaryGap: false, data: chartData.dates || [] },
+		yAxis: {
+			type: 'value',
+			axisLabel: {
+				formatter: function(value){
+					return formatBytes(value);
+				}
+			}
+		},
+		series: [
+			{ name: '上传', type: 'line', smooth: true, areaStyle: {}, data: chartData.daily_upload || [], itemStyle: { color: '#0f766e' } },
+			{ name: '下载', type: 'line', smooth: true, areaStyle: {}, data: chartData.daily_download || [], itemStyle: { color: '#1d4ed8' } }
+		]
+	}, true);
+
+	nodeTrafficChart.resize();
+}
+
+// 初始化上传区域
+function initUploadArea(){
+	var uploadArea = $('#uploadArea');
+	var uploadPlaceholder = $('#uploadPlaceholder');
+	var fileInput = $('#fileInput');
+	
+	// 点击上传
+	uploadPlaceholder.on('click', function(){
+		fileInput.click();
+	});
+	
+	// 文件选择
+	fileInput.on('change', function(e){
+		var file = e.target.files[0];
+		if(file){
+			uploadImage(file);
+		}
+	});
+	
+	// 拖拽上传
+	uploadArea.on('dragover', function(e){
+		e.preventDefault();
+		e.stopPropagation();
+		$(this).addClass('drag-over');
+	});
+	
+	uploadArea.on('dragleave', function(e){
+		e.preventDefault();
+		e.stopPropagation();
+		$(this).removeClass('drag-over');
+	});
+	
+	uploadArea.on('drop', function(e){
+		e.preventDefault();
+		e.stopPropagation();
+		$(this).removeClass('drag-over');
+		
+		var files = e.originalEvent.dataTransfer.files;
+		if(files.length > 0){
+			uploadImage(files[0]);
+		}
+	});
+}
+
+// 初始化拖拽排序
+function initSortable(){
+	var el = document.getElementById('lineList');
+	if(!el) return;
+	
+	new Sortable(el, {
+		animation: 150,
+		handle: '.drag-handle',
+		ghostClass: 'sortable-ghost',
+		chosenClass: 'sortable-chosen',
+		dragClass: 'sortable-drag',
+		onEnd: function(evt){
+			var ids = [];
+			$('#lineList tr[data-id]').each(function(){
+				var id = $(this).data('id');
+				if(id){
+					ids.push(id);
+				}
+			});
+			
+			if(ids.length > 0){
+				updateSort(ids);
+			}
+		}
+	});
+}
+
+// 更新排序
+function updateSort(ids){
+	$.ajax({
+		url: "{:url('line/updateSort')}",
+		type: 'POST',
+		data: { ids: ids },
+		dataType: 'json',
+		success: function(res){
+			if(res.error_code == 2000){
+				showMsg('排序已更新', 'success');
+			}else{
+				showMsg(res.msg || '排序更新失败', 'danger');
+				setTimeout(function(){
+					window.location.reload();
+				}, 1500);
+			}
+		},
+		error: function(){
+			showMsg('排序更新失败', 'danger');
+			setTimeout(function(){
+				window.location.reload();
+			}, 1500);
+		}
+	});
+}
+
+// 上传图片
+function uploadImage(file){
+	// 验证文件类型
+	var allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+	if(allowedTypes.indexOf(file.type) === -1){
+		showMsg('只支持 JPG、PNG、GIF 格式的图片', 'warning');
+		return;
+	}
+	
+	// 验证文件大小（2MB）
+	if(file.size > 2 * 1024 * 1024){
+		showMsg('图片大小不能超过 2MB', 'warning');
+		return;
+	}
+	
+	// 显示加载状态
+	$('#uploadPlaceholder').html('<i class="mdi mdi-loading mdi-spin"></i><p>上传中...</p>');
+	
+	// 创建 FormData
+	var formData = new FormData();
+	formData.append('file', file);
+	
+	// 上传
+	$.ajax({
+		url: "{:url('line/uploadImage')}",
+		type: 'POST',
+		data: formData,
+		processData: false,
+		contentType: false,
+		dataType: 'json',
+		success: function(res){
+			if(res.error_code == 2000){
+				uploadedImageUrl = res.data.url;
+				$('#imgUrl').val(uploadedImageUrl);
+				showPreview(uploadedImageUrl);
+			}else{
+				showMsg(res.msg || '上传失败', 'danger');
+				resetUploadArea();
+			}
+		},
+		error: function(){
+			showMsg('上传失败，请重试', 'danger');
+			resetUploadArea();
+		}
+	});
+}
+
+// 显示预览
+function showPreview(url){
+	$('#uploadPlaceholder').hide();
+	$('#previewImage').attr('src', url);
+	$('#uploadPreview').show();
+}
+
+// 移除图片
+function removeImage(){
+	uploadedImageUrl = '';
+	$('#imgUrl').val('');
+	$('#fileInput').val('');
+	resetUploadArea();
+}
+
+// 重置上传区域
+function resetUploadArea(){
+	$('#uploadPreview').hide();
+	$('#uploadPlaceholder').html('<i class="mdi mdi-cloud-upload"></i><p>点击或拖拽图片到此处上传</p><small class="text-muted">支持 JPG、PNG、GIF 格式，大小不超过 2MB</small>').show();
+}
+
+// 加载线路列表
+function loadList(page = 1){
+	currentPage = page;
+	var perPage = localStorage.getItem('line_per_page') || 20;
+	window.location.href = "{:url('line/index')}?page=" + page + "&per_page=" + perPage;
+}
+
+// 改变每页数量
+function changePerPage(perPage){
+	localStorage.setItem('line_per_page', perPage);
+	window.location.href = "{:url('line/index')}?page=1&per_page=" + perPage;
+}
+
+// 显示添加模态框
+function showAddModal(){
+	isEdit = false;
+	$('#modalTitle').text('添加线路');
+	$('#lineForm')[0].reset();
+	$('#lineId').val('');
+	$('#imgUrl').val('');
+	uploadedImageUrl = '';
+	resetUploadArea();
+	$('#modalErrorMsg').hide();
+	$('#lineModal .modal-footer .btn-primary').prop('disabled', false).html('保存');
+	$('#lineModal').modal('show');
+}
+
+// 显示编辑模态框
+function showEditModal(id){
+	isEdit = true;
+	$('#modalTitle').text('编辑线路');
+	$('#modalErrorMsg').hide();
+	resetUploadArea();
+	$('#lineModal .modal-footer .btn-primary').prop('disabled', false).html('保存');
+	
+	$.ajax({
+		url: "{:url('line/get')}",
+		type: 'GET',
+		data: { id: id },
+		dataType: 'json',
+		success: function(res){
+			if(res.error_code == 2000){
+				var data = res.data;
+				$('#lineId').val(data.id);
+				$('#name').val(data.name);
+				$('#subtitle').val(data.subtitle);
+				$('#ip').val(data.ip);
+				$('#port').val(data.port);
+				$('#uuid').val(data.uuid);
+				$('#sni').val(data.sni);
+				$('#public_key').val(data.public_key);
+				$('#short_id').val(data.short_id);
+				$('#flow').val(data.flow);
+				$('#type').val(data.type);
+				
+				if(data.img_url){
+					uploadedImageUrl = data.img_url;
+					$('#imgUrl').val(data.img_url);
+					showPreview(data.img_url);
+				}
+				
+				$('#lineModal').modal('show');
+			}else{
+				showMsg(res.msg || '获取数据失败', 'danger');
+			}
+		},
+		error: function(){
+			showMsg('未知异常', 'danger');
+		}
+	});
+}
+
+// 保存线路
+function saveLine(){
+	var btn = $('#lineModal .modal-footer .btn-primary');
+	if(btn.prop('disabled')) return;
+
+	btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> 保存中...');
+
+	var url = isEdit ? "{:url('line/edit')}" : "{:url('line/add')}";
+	var formData = {};
+	
+	$('#modalErrorMsg').hide();
+	
+	$('#lineForm').serializeArray().forEach(function(item){
+		if(item.value){
+			formData[item.name] = item.value;
+		}
+	});
+	
+	$.ajax({
+		url: url,
+		type: 'POST',
+		data: formData,
+		dataType: 'json',
+		success: function(res){
+			if(res.error_code == 2000){
+				showMsg('操作成功');
+				$('#lineModal').modal('hide');
+				setTimeout(function(){
+					window.location.reload();
+				}, 1000);
+			}else{
+				btn.prop('disabled', false).html('保存');
+				$('#modalErrorText').text(res.msg || '操作失败');
+				$('#modalErrorMsg').slideDown(300);
+			}
+		},
+		error: function(){
+			btn.prop('disabled', false).html('保存');
+			$('#modalErrorText').text('未知异常，请稍后重试');
+			$('#modalErrorMsg').slideDown(300);
+		}
+	});
+}
+
+// 显示删除确认框
+function showDeleteConfirm(id){
+	deleteId = id;
+	$('#deleteModal').modal('show');
+}
+
+// 确认删除
+function confirmDelete(){
+	$('#deleteModal').modal('hide');
+	deleteLine(deleteId);
+}
+
+// 删除线路
+function deleteLine(id){
+	$.ajax({
+		url: "{:url('line/destroy')}",
+		type: 'POST',
+		data: { id: id },
+		dataType: 'json',
+		success: function(res){
+			if(res.error_code == 2000){
+				showMsg('删除成功');
+				setTimeout(function(){
+					window.location.reload();
+				}, 1000);
+			}else{
+				showMsg(res.msg || '删除失败', 'danger');
+			}
+		},
+		error: function(){
+			showMsg('未知异常', 'danger');
+		}
+	});
+}
+
+// 切换字段显示（UUID等敏感信息）
+function toggleField(btn, fieldType){
+	var $btn = $(btn);
+	var $tr = $btn.closest('tr');
+	var $mask = $tr.find('.' + fieldType + '-mask');
+	var $text = $tr.find('.' + fieldType + '-text');
+	var $icon = $btn.find('i');
+	
+	if($mask.is(':visible')){
+		$mask.hide();
+		$text.show();
+		$icon.removeClass('mdi-eye').addClass('mdi-eye-off');
+	}else{
+		$mask.show();
+		$text.hide();
+		$icon.removeClass('mdi-eye-off').addClass('mdi-eye');
+	}
+}
+</script>
+
+</body>
+{/block}

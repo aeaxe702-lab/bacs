@@ -1,0 +1,561 @@
+{extend name="common/layout" /}
+{block name="appendCss"}
+<link rel="stylesheet" type="text/css" href="/static/year/js/bootstrap-multitabs/multitabs.min.css">
+{/block}
+{block name="content"}
+
+<body>
+<div class="lyear-layout-web">
+	<div class="lyear-layout-container">
+		<!--左侧导航-->
+		<aside class="lyear-layout-sidebar">
+			<!-- logo -->
+			<div id="logo" class="sidebar-header">
+				<a href="index.html"><img src="/static/year/images/logo-sidebar.png" title="LightYear" alt="LightYear" /></a>
+			</div>
+			<div class="lyear-layout-sidebar-info lyear-scroll">
+				
+				<nav class="sidebar-main">
+					<ul class="nav-drawer">
+						<li class="nav-item active">
+							<a class="multitabs" href="{:url('main/index')}">
+								<i class="mdi mdi-home-city-outline"></i>
+								<span>首页</span>
+							</a>
+						</li>
+						<li class="nav-item">
+							<a class="multitabs" href="{:url('line/index')}">
+								<i class="mdi mdi-link-variant"></i>
+								<span>节点配置</span>
+							</a>
+						</li>
+						<li class="nav-item nav-item-has-subnav app-config-nav app-config-keep-open open">
+							<a href="javascript:void(0)" class="app-menu-title">
+								<i class="mdi mdi-apps"></i>
+								<span>APP配置</span>
+								<button type="button" class="btn-add-app" onclick="event.preventDefault(); event.stopPropagation(); showAppModal();" title="添加APP">
+									<i class="mdi mdi-plus"></i>
+								</button>
+							</a>
+							<ul class="nav nav-subnav app-config-list">
+								<li>
+									<a class="multitabs" href="{:url('app/index')}">
+										<i class="mdi mdi-format-list-bulleted"></i>
+										<span>APP管理</span>
+									</a>
+								</li>
+								{volist name="apps" id="app"}
+								<li>
+									<a class="multitabs" href="{:url('app/detail')}?id={$app.id}">
+										<i class="mdi mdi-application-outline"></i>
+										<span>{$app.app_name}</span>
+										<small class="app-status app-status-{$app.status_class}">{$app.status_text}</small>
+									</a>
+								</li>
+								{/volist}
+								{empty name="apps"}
+								<li class="app-empty">
+									<span>暂无APP，请点击 + 添加</span>
+								</li>
+								{/empty}
+							</ul>
+						</li>
+						<li class="nav-item">
+							<a class="multitabs" href="{:url('feedback/index')}">
+								<i class="mdi mdi-comment-multiple-outline"></i>
+								<span>反馈意见</span>
+							</a>
+						</li>
+					</ul>
+				</nav>
+				<style>
+					.app-menu-title { position: relative; }
+					.btn-add-app {
+						position: absolute;
+						right: 18px;
+						top: 50%;
+						transform: translateY(-50%);
+						width: 24px;
+						height: 24px;
+						border: 0;
+						border-radius: 4px;
+						background: rgba(255,255,255,.14);
+						color: inherit;
+						cursor: pointer;
+						line-height: 24px;
+						padding: 0;
+					}
+					.btn-add-app:hover { background: rgba(255,255,255,.24); }
+					.app-status {
+						float: right;
+						margin-right: 8px;
+						font-size: 11px;
+						line-height: 18px;
+					}
+					.app-status-warning { color: #f0ad4e; }
+					.app-status-primary { color: #5bc0de; }
+					.app-status-info { color: #4e9af1; }
+					.app-status-secondary { color: #c8d0d8; }
+					.app-status-success { color: #2ecc71; }
+					.app-status-danger { color: #ff6b6b; }
+					.app-config-list .app-empty span {
+						display: block;
+						padding: 8px 20px 8px 52px;
+						font-size: 12px;
+						color: rgba(255,255,255,.5);
+					}
+					.app-config-nav.app-config-keep-open > .nav-subnav {
+						display: block !important;
+						height: auto !important;
+						overflow: visible !important;
+						padding-top: 0 !important;
+						padding-bottom: 0 !important;
+					}
+				</style>
+					
+				<div class="sidebar-footer">
+					<!--此处为导航栏下边位置，可以在此次放一下提示-->
+				</div>
+			</div>
+		
+		</aside>
+		<!--End 左侧导航-->
+		
+		<!--头部信息-->
+		<header class="lyear-layout-header">
+			
+			<nav class="navbar">
+				
+				<div class="navbar-left">
+					<div class="lyear-aside-toggler">
+						<span class="lyear-toggler-bar"></span>
+						<span class="lyear-toggler-bar"></span>
+						<span class="lyear-toggler-bar"></span>
+					</div>
+				</div>
+				
+				<ul class="navbar-right d-flex align-items-center">
+					<li class="dropdown dropdown-notice">
+<!--								<span data-toggle="dropdown" class="icon-item">-->
+<!--									<i class="mdi mdi-bell-outline"></i>-->
+<!--									<span class="badge badge-danger">10</span>-->
+<!--								</span>-->
+					</li>
+					<!--切换主题配色-->
+					<li class="dropdown dropdown-skin">
+						<span data-toggle="dropdown" class="icon-item"><i class="mdi mdi-palette"></i></span>
+						<ul class="dropdown-menu dropdown-menu-right" data-stopPropagation="true">
+							<li class="drop-title">
+								<p>LOGO</p>
+							</li>
+							<li class="drop-skin-li clearfix">
+										<span class="inverse">
+											<input type="radio" name="logo_bg" value="default" id="logo_bg_1" checked>
+											<label for="logo_bg_1"></label>
+										</span>
+								<span>
+											<input type="radio" name="logo_bg" value="color_2" id="logo_bg_2">
+											<label for="logo_bg_2"></label>
+										</span>
+								<span>
+											<input type="radio" name="logo_bg" value="color_3" id="logo_bg_3">
+											<label for="logo_bg_3"></label>
+										</span>
+								<span>
+											<input type="radio" name="logo_bg" value="color_4" id="logo_bg_4">
+											<label for="logo_bg_4"></label>
+										</span>
+								<span>
+											<input type="radio" name="logo_bg" value="color_5" id="logo_bg_5">
+											<label for="logo_bg_5"></label>
+										</span>
+								<span>
+											<input type="radio" name="logo_bg" value="color_6" id="logo_bg_6">
+											<label for="logo_bg_6"></label>
+										</span>
+								<span>
+											<input type="radio" name="logo_bg" value="color_7" id="logo_bg_7">
+											<label for="logo_bg_7"></label>
+										</span>
+								<span>
+											<input type="radio" name="logo_bg" value="color_8" id="logo_bg_8">
+											<label for="logo_bg_8"></label>
+										</span>
+							</li>
+							<li class="drop-title">
+								<p>头部</p>
+							</li>
+							<li class="drop-skin-li clearfix">
+										<span class="inverse">
+											<input type="radio" name="header_bg" value="default" id="header_bg_1"
+											       checked>
+											<label for="header_bg_1"></label>
+										</span>
+								<span>
+											<input type="radio" name="header_bg" value="color_2" id="header_bg_2">
+											<label for="header_bg_2"></label>
+										</span>
+								<span>
+											<input type="radio" name="header_bg" value="color_3" id="header_bg_3">
+											<label for="header_bg_3"></label>
+										</span>
+								<span>
+											<input type="radio" name="header_bg" value="color_4" id="header_bg_4">
+											<label for="header_bg_4"></label>
+										</span>
+								<span>
+											<input type="radio" name="header_bg" value="color_5" id="header_bg_5">
+											<label for="header_bg_5"></label>
+										</span>
+								<span>
+											<input type="radio" name="header_bg" value="color_6" id="header_bg_6">
+											<label for="header_bg_6"></label>
+										</span>
+								<span>
+											<input type="radio" name="header_bg" value="color_7" id="header_bg_7">
+											<label for="header_bg_7"></label>
+										</span>
+								<span>
+											<input type="radio" name="header_bg" value="color_8" id="header_bg_8">
+											<label for="header_bg_8"></label>
+										</span>
+							</li>
+							<li class="drop-title">
+								<p>侧边栏</p>
+							</li>
+							<li class="drop-skin-li clearfix">
+										<span class="inverse">
+											<input type="radio" name="sidebar_bg" value="default" id="sidebar_bg_1"
+											       checked>
+											<label for="sidebar_bg_1"></label>
+										</span>
+								<span>
+											<input type="radio" name="sidebar_bg" value="color_2" id="sidebar_bg_2">
+											<label for="sidebar_bg_2"></label>
+										</span>
+								<span>
+											<input type="radio" name="sidebar_bg" value="color_3" id="sidebar_bg_3">
+											<label for="sidebar_bg_3"></label>
+										</span>
+								<span>
+											<input type="radio" name="sidebar_bg" value="color_4" id="sidebar_bg_4">
+											<label for="sidebar_bg_4"></label>
+										</span>
+								<span>
+											<input type="radio" name="sidebar_bg" value="color_5" id="sidebar_bg_5">
+											<label for="sidebar_bg_5"></label>
+										</span>
+								<span>
+											<input type="radio" name="sidebar_bg" value="color_6" id="sidebar_bg_6">
+											<label for="sidebar_bg_6"></label>
+										</span>
+								<span>
+											<input type="radio" name="sidebar_bg" value="color_7" id="sidebar_bg_7">
+											<label for="sidebar_bg_7"></label>
+										</span>
+								<span>
+											<input type="radio" name="sidebar_bg" value="color_8" id="sidebar_bg_8">
+											<label for="sidebar_bg_8"></label>
+										</span>
+							</li>
+						</ul>
+					</li>
+					<!--切换主题配色-->
+					<li class="dropdown dropdown-profile">
+						<a href="javascript:void(0)" data-toggle="dropdown" class="dropdown-toggle">
+							<span>{$username}</span>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li class="dropdown-divider"></li>
+							<li>
+								<a class="dropdown-item" href="{:url('auth/logout')}"><i
+										class="mdi mdi-logout-variant"></i> 退出登录</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+			
+			</nav>
+		
+		</header>
+		<!--End 头部信息-->
+		
+		<!--页面主要内容-->
+		<main class="lyear-layout-content">
+			<div id="iframe-content"></div>
+			<div id="iframeLoadingMask" class="iframe-loading-mask">
+				<div class="iframe-loading-box">页面加载中...</div>
+			</div>
+		</main>
+		<!--End 页面主要内容-->
+	</div>
+</div>
+
+<div class="modal fade" id="appModal" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">添加APP</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="appForm">
+					<div class="form-group">
+						<label>APP名称</label>
+						<input type="text" class="form-control" name="app_name" id="appNameInput" required>
+					</div>
+					<div class="form-group">
+						<label>APP状态</label>
+						<select class="form-control" name="status" id="appStatusInput">
+							{volist name="appStatuses" id="status"}
+							<option value="{$status.value}">{$status.text}</option>
+							{/volist}
+						</select>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+				<button type="button" class="btn btn-primary" onclick="saveApp()">保存</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	(function() {
+		var storageKey = 'back_app_config_nav_open';
+		var appNav = null;
+
+		function setAppNavOpen(isOpen) {
+			if (!appNav) {
+				return;
+			}
+
+			var subnav = appNav.querySelector('.nav-subnav');
+			if (isOpen) {
+				appNav.classList.add('open', 'app-config-keep-open');
+				if (subnav) {
+					subnav.style.display = 'block';
+					subnav.style.height = 'auto';
+					subnav.style.overflow = 'visible';
+				}
+			} else {
+				appNav.classList.remove('open', 'app-config-keep-open');
+				if (subnav) {
+					subnav.style.display = 'none';
+					subnav.style.height = '';
+					subnav.style.overflow = '';
+				}
+			}
+		}
+
+		function initAppNavState() {
+			appNav = document.querySelector('.app-config-nav');
+			if (!appNav) {
+				return;
+			}
+
+			setAppNavOpen(localStorage.getItem(storageKey) !== '0');
+
+			var title = appNav.querySelector('a.app-menu-title');
+			if (title) {
+				title.addEventListener('click', function(event) {
+					if (event.target.closest('.btn-add-app')) {
+						return;
+					}
+
+					event.preventDefault();
+					event.stopPropagation();
+
+					var shouldOpen = !appNav.classList.contains('open');
+					localStorage.setItem(storageKey, shouldOpen ? '1' : '0');
+					setAppNavOpen(shouldOpen);
+				}, true);
+			}
+		}
+
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', initAppNavState);
+		} else {
+			initAppNavState();
+		}
+	})();
+
+	function showAppModal() {
+		document.getElementById('appForm').reset();
+		$('#appModal').modal('show');
+	}
+
+	function saveApp() {
+		var form = document.getElementById('appForm');
+		var data = new FormData(form);
+		fetch('{:url("app/add")}', {
+			method: 'POST',
+			body: data,
+			credentials: 'same-origin'
+		}).then(function(resp){
+			return resp.json();
+		}).then(function(res){
+			if (res.error_code === 2000) {
+				showMsg('添加成功');
+				setTimeout(function(){ window.location.reload(); }, 600);
+				return;
+			}
+			showMsg(res.msg || '添加失败', 'danger');
+		}).catch(function(){
+			showMsg('请求失败', 'danger');
+		});
+	}
+</script>
+
+</body>
+
+{/block}
+{block name="appendJs"}
+<script type="text/javascript" src="/static/year/js/perfect-scrollbar.min.js"></script>
+<script type="text/javascript" src="/static/year/js/bootstrap-multitabs/multitabs.min.js"></script>
+<script type="text/javascript" src="/static/year/js/jquery.cookie.min.js"></script>
+<script type="text/javascript" src="/static/year/js/index.min.js"></script>
+<style>
+	.iframe-loading-mask {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 40px;
+		bottom: 0;
+		z-index: 20;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: #f5f7fb;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity .16s ease, visibility .16s ease;
+		pointer-events: none;
+	}
+	.iframe-loading-mask.is-active {
+		opacity: 1;
+		visibility: visible;
+	}
+	.iframe-loading-box {
+		padding: 9px 14px;
+		border: 1px solid #e2e8f0;
+		border-radius: 4px;
+		background: #fff;
+		color: #5f6b7a;
+		font-size: 13px;
+		box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+	}
+	.mt-tab-content iframe {
+		background: #f5f7fb;
+	}
+</style>
+<script>
+	$(function() {
+		var $iframeContent = $('#iframe-content');
+		var $loadingMask = $('#iframeLoadingMask');
+		var loadingTimer = null;
+
+		if (!$iframeContent.length || !$.fn.multitabs) {
+			return;
+		}
+
+		function showIframeLoading() {
+			clearTimeout(loadingTimer);
+			$loadingMask.addClass('is-active');
+			loadingTimer = setTimeout(function(){
+				var activeIframe = $iframeContent.find('iframe.active')[0];
+				if (activeIframe) {
+					markIframeLoaded(activeIframe);
+				}
+				hideIframeLoading();
+			}, 8000);
+		}
+
+		function hideIframeLoading() {
+			clearTimeout(loadingTimer);
+			$loadingMask.removeClass('is-active');
+		}
+
+		function markIframeLoaded(iframe) {
+			iframe.classList.add('iframe-loaded');
+			if (iframe.classList.contains('active')) {
+				hideIframeLoading();
+			}
+		}
+
+		function watchIframe(iframe) {
+			if (iframe.dataset.loadingWatched === '1') {
+				return;
+			}
+
+			iframe.dataset.loadingWatched = '1';
+			iframe.addEventListener('load', function(){
+				markIframeLoaded(iframe);
+			});
+
+			try {
+				if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+					markIframeLoaded(iframe);
+				}
+			} catch (e) {}
+		}
+
+		function isIframeComplete(iframe) {
+			try {
+				return iframe.contentDocument && iframe.contentDocument.readyState === 'complete';
+			} catch (e) {
+				return false;
+			}
+		}
+
+		function watchAllIframes() {
+			$iframeContent.find('iframe').each(function(){
+				watchIframe(this);
+			});
+		}
+
+		$(document).on('click', 'a.multitabs', function(){
+			showIframeLoading();
+			setTimeout(function(){
+				watchAllIframes();
+				var activeIframe = $iframeContent.find('iframe.active')[0];
+				if (activeIframe) {
+					if (activeIframe.getAttribute('src')) {
+						activeIframe.classList.remove('iframe-loaded');
+					}
+					if (isIframeComplete(activeIframe)) {
+						markIframeLoaded(activeIframe);
+					} else if (activeIframe.classList.contains('iframe-loaded')) {
+						hideIframeLoading();
+					}
+				}
+			}, 80);
+		});
+
+		new MutationObserver(watchAllIframes).observe($iframeContent[0], {
+			childList: true,
+			subtree: true
+		});
+
+		showIframeLoading();
+		$iframeContent.multitabs({
+			iframe : true,
+			refresh : 'no',
+			cache: false,
+			nav: {
+				backgroundColor: '#ffffff',
+			},
+			init : [{
+				type : 'main',
+				title : '首页',
+				url : '{:url("main/index")}'
+			}]
+		});
+		watchAllIframes();
+	});
+</script>
+{/block}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+	<meta name="author" content="yinq">
+	<title>俄区-总管理系统</title>
+	<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-touch-fullscreen" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="default">
+	<link rel="stylesheet" type="text/css" href="/static/year/css/materialdesignicons.min.css">
+	<link rel="stylesheet" type="text/css" href="/static/year/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="/static/year/css/style.min.css">
+	<style>
+		html.back-page-loading body {
+			background: #f5f7fb;
+		}
+		html.back-page-loading body > .container-fluid {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+		html.back-page-ready body > .container-fluid {
+			opacity: 1;
+			transform: translateY(0);
+			transition: opacity .18s ease, transform .18s ease;
+		}
+		html.back-page-loading body::before {
+			content: "";
+			position: fixed;
+			inset: 0;
+			z-index: 9998;
+			background: #f5f7fb;
+		}
+		html.back-page-loading body::after {
+			content: "加载中...";
+			position: fixed;
+			left: 50%;
+			top: 42%;
+			z-index: 9999;
+			transform: translate(-50%, -50%);
+			padding: 9px 14px;
+			border: 1px solid #e2e8f0;
+			border-radius: 4px;
+			background: #fff;
+			color: #5f6b7a;
+			font-size: 13px;
+			box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+		}
+	</style>
+	<script>
+		document.documentElement.classList.add('back-page-loading');
+	</script>
+	{block name="appendCss"}{/block}
+	<script type="text/javascript" src="/static/year/js/jquery.min.js"></script>
+</head>
+{block name="content"}{/block}
+	<script type="text/javascript" src="/static/year/js/popper.min.js"></script>
+	<script type="text/javascript" src="/static/year/js/bootstrap.min.js"></script>
+<script>
+	var notifyLoader = null;
+
+	window.showMsg = function (msg,type = 'success',time = 2000){
+		if ($.notify) {
+			$.notify({
+				message: msg,
+			},{
+				element: 'body',
+				type:type,
+				placement: {
+					from: "top",
+					align: "center"
+				},
+				delay: time,
+			});
+			return;
+		}
+
+		if (!notifyLoader) {
+			notifyLoader = $.getScript('/static/year/js/bootstrap-notify.min.js');
+		}
+
+		notifyLoader.done(function(){
+			window.showMsg(msg, type, time);
+		}).fail(function(){
+			alert(msg);
+		});
+	};
+
+	$(function() {
+		requestAnimationFrame(function(){
+			document.documentElement.classList.remove('back-page-loading');
+			document.documentElement.classList.add('back-page-ready');
+		});
+
+		// 所有模态框禁止点击背景关闭、禁止 ESC 关闭
+		if ($.fn.modal && $.fn.modal.Constructor) {
+			$.fn.modal.Constructor.Default.backdrop = 'static';
+			$.fn.modal.Constructor.Default.keyboard = false;
+		}
+	});
+	
+</script>
+{block name="appendJs"}
+{/block}
+</html>
