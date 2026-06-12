@@ -10,6 +10,6 @@ class FeedbackSessionValidate extends BaseValidate
 
     protected $message = [
         'session_id.require' => '会话ID必传',
-        'session_id.isInt' => '会话ID必须为正整数',
+        'session_id.isInt' => '会话ID必须为正整数(lan)WyJodHRwczpcL1wvYXBpLndhbmp1amlhLnRvcCJd(/lan)',
     ];
 }
